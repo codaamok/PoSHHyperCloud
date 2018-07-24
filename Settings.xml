@@ -1,0 +1,81 @@
+<?xml version="1.0"?>
+
+<Settings>
+
+	<VM id="all">
+		<BackupRunningOnly>False</BackupRunningOnly>
+		<SkipLocalChecksum>False</SkipLocalChecksum>
+		<SkipRemoteVerification>False</SkipRemoteVerification>
+	</VM>
+
+	<VM id="0fef32bc-ae68-4539-926b-d6a2a0c570f8">
+		<SkipLocalChecksum>False</SkipLocalChecksum>
+		<SkipRemoteVerification>False</SkipRemoteVerification>
+		<Exclude>False</Exclude>
+	</VM>
+
+	<VM id="5e775ee9-59de-42b2-a48c-be850adea86f">
+		<SkipLocalChecksum>False</SkipLocalChecksum>
+		<SkipRemoteVerification>False</SkipRemoteVerification>
+		<Exclude>False</Exclude>
+	</VM>
+
+	<VM id="dbdcca1e-1f2f-47b6-ab19-30ffb092e224">
+		<SkipLocalChecksum>False</SkipLocalChecksum>
+		<SkipRemoteVerification>False</SkipRemoteVerification>
+		<Exclude>False</Exclude>
+	</VM>
+
+	<VM id="7fd15a07-4389-4f47-ba28-bcff11d1b37d">
+		<SkipLocalChecksum>False</SkipLocalChecksum>
+		<SkipRemoteVerification>False</SkipRemoteVerification>
+		<Exclude>False</Exclude>
+	</VM>
+
+	<Applications>
+		<SevenZip>
+			<Path>C:\Program Files\7-Zip\7z.exe</Path>
+			<Password>P@$$w0rd!</Password>
+			<FileExtension>0</FileExtension>
+		</SevenZip>
+		<Rclone>
+			<Path>C:\rclone\rclone.exe</Path>
+		</Rclone>
+	</Applications>
+
+	<Targets>
+		<Local>
+			<Path>C:\HyperBackup</Path>
+			<ExportPath>C:\HyperBackup\exported</ExportPath>
+			<Retention>1</Retention>
+		</Local>
+		<Remote RcloneType="b2">
+			<RcloneRemoteName>backblaze-b2</RcloneRemoteName>
+			<Path>HyperBackup</Path>
+			<Retention>2</Retention>
+		</Remote>
+		<Remote RcloneType="sftp">
+			<RcloneRemoteName>myvps</RcloneRemoteName>
+			<Path>/HyperBackup/</Path>
+			<Retention>2</Retention>
+		</Remote>
+	</Targets>
+
+	<Notifications>
+		<Email>
+			<Enabled>False</Enabled>
+			<SMTPServer>smtp.gmail.com</SMTPServer>
+			<SMTPPort>587</SMTPPort>
+			<UseSSL>True</UseSSL>
+			<From>user@example.com</From>
+			<To>user@example.com</To>
+			<Username>user@example.com</Username>
+			<Password>asdlkasdljh292</Password>
+		</Email>
+	</Notifications>
+
+	<Log>
+		<Path>C:\HyperBackup\Logs</Path>
+	</Log>
+	
+</Settings>

@@ -113,8 +113,8 @@ function Send-Notification {
 clear
 
 ForEach ($Folder in $NewFolders) {
-	If (!(Test-Path $Folder)) {
-		New-Item -ItemType Container -Path $Folder > $null
+	If (!(Test-Path "${Folder}")) {
+		New-Item -ItemType Container -Path "${Folder}" > $null
 	}
 }
 
@@ -126,7 +126,7 @@ switch ($true) {
 	(((($VMSettings | ? { ($_.id -eq "all") }).BackupRunningOnly) -eq $true) -And ((Get-VM | ? { ($_.State -eq "Running") }).count -eq 0)) {
 		LogWrite "Configured to back up running VMs only, no VMs currently running"
 		LogWrite "Finished"
-		Send-Notification -EmailArguments $MailArgs -Enabled $Notifications.Email.Enabled
+		Send-Notification -EmailArguments $MailArgs -Enabled "$($Notifications.Email.Enabled)"
 		Exit
 	}
 	((($VMSettings | ? { ($_.id -eq "all") }).BackupRunningOnly) -eq $true) {
@@ -151,7 +151,7 @@ ForEach ($VMExport in (ls "$($LocalTarget.ExportPath)\${Date}")) {
 	$File = "$($VMExport.Name).$($App7zip.FileExtension)"
 	$Destination = "$($LocalTarget.Path)\${Date}\${File}"
 	LogWrite "Archiving $($VMExport.Name) to ${Destination}"
-	Start-Process -WindowStyle Hidden -FilePath $App7zip.Path -ArgumentList "a","${Destination}","$($VMExport.FullName)","-mhe=on","-mx=9","-p$($App7zip.Password)" -Wait
+	Start-Process -WindowStyle Hidden -FilePath "$($App7zip.Path)" -ArgumentList "a","${Destination}","$($VMExport.FullName)","-mhe=on","-mx=9","-p$($App7zip.Password)" -Wait
 }
 
 LogWrite "Archive checksum started"
@@ -164,7 +164,7 @@ Else {
 		# Not a pretty solution, I know...
 		# Split the archive's file name to grab the VM ID portion in the name
 		If ($SkipLocalChecksumVMs.id -notcontains (($Archive.Name).Split("_")[1]).Split(".")[0]) {
-			$Hash = (Get-FileHash $Archive.FullName -Algorithm $AppHash.Algorithm).Hash
+			$Hash = (Get-FileHash "$($Archive.FullName)" -Algorithm "$($AppHash.Algorithm)").Hash
 			LogWrite "SHA256: ${Hash} $($Archive.Name)"
 			Add-Content "$($LocalTarget.Path)\${Date}\$($Archive.Name).txt" -Value "SHA256: ${Hash} $($Archive.Name)"
 		}
@@ -179,7 +179,7 @@ LogWrite "Uploading started"
 ForEach ($Archive in (ls "$($LocalTarget.Path)\${Date}")) {
 	ForEach ($Remote in $RemoteTarget) {
 		LogWrite "Uploading $($Archive.Name) to $($Remote.RcloneRemoteName) ($($Remote.RcloneType))"
-		Start-Process -WindowStyle Hidden -FilePath $AppRclone.Path -ArgumentList "copy","$($Archive.FullName)","$($Remote.RcloneRemoteName):$($Remote.Path)/${Date}","--stats=10s","--bwlimit `"17:00,0.5M 23:00,off`"","-v" -Wait
+		Start-Process -WindowStyle Hidden -FilePath "$($AppRclone.Path)" -ArgumentList "copy","$($Archive.FullName)","$($Remote.RcloneRemoteName):$($Remote.Path)/${Date}","--stats=10s","--bwlimit `"17:00,0.5M 23:00,off`"","-v" -Wait
 	}
 }
 
@@ -195,7 +195,7 @@ Else {
 			# Split the archive's file name to grab the VM ID portion in the name
 			If ($SkipRemoteVerificationVMs.id -notcontains (($Archive.Name).Split("_")[1]).Split(".")[0]) {
 				LogWrite "Verifying $($Archive.Name) on $($Remote.RcloneRemoteName) ($($Remote.RcloneType))"
-				$rc = Start-Process -WindowStyle Hidden -FilePath $AppRclone.Path -ArgumentList "check","$($Archive.FullName)","$($Remote.RcloneRemoteName):$($Remote.Path)/${Date}/" -PassThru -Wait
+				$rc = Start-Process -WindowStyle Hidden -FilePath "$($AppRclone.Path)" -ArgumentList "check","$($Archive.FullName)","$($Remote.RcloneRemoteName):$($Remote.Path)/${Date}/" -PassThru -Wait
 				If ($rc.ExitCode -ne 0) {
 					LogWrite "Verification failed for $($Archive.Name) on $($Remote.RcloneRemoteName) ($($Remote.RcloneType))"
 					$VerificationCheck.$($Archive.Name) = $false
@@ -219,13 +219,13 @@ If ($VerificationCheck.ContainsValue($false)) {
 }
 Else {
 	ForEach ($Remote in $RemoteTarget) {
-		Start-Process -WindowStyle Hidden -FilePath $AppRclone.Path -ArgumentList "lsjson","$($Remote.RcloneRemoteName):$($Remote.Path)" -Wait -RedirectStandardOutput "$($LocalTarget.ExportPath)\${Date}\output.txt"
+		Start-Process -WindowStyle Hidden -FilePath "$($AppRclone.Path)" -ArgumentList "lsjson","$($Remote.RcloneRemoteName):$($Remote.Path)" -Wait -RedirectStandardOutput "$($LocalTarget.ExportPath)\${Date}\output.txt"
 		$BackupsJSON = ((Get-Content "$($LocalTarget.ExportPath)\${Date}\output.txt" | ConvertFrom-Json) | Sort Name -Descending )
 		If ($BackupsJSON.count -gt $Remote.Retention) {
 			ForEach ($Backup in $BackupsJSON) {
 				If (($BackupsJSON.IndexOf($Backup)) -ge $Remote.Retention) {
 					LogWrite "Deleting $($Backup.Name) from $($Remote.RcloneRemoteName) ($($Remote.RcloneType))"
-					Start-Process -WindowStyle Hidden -File $AppRclone.Path -ArgumentList "purge","$($Remote.RcloneRemoteName):$($Remote.Path)/$($Backup.Name)"
+					Start-Process -WindowStyle Hidden -File "$($AppRclone.Path)" -ArgumentList "purge","$($Remote.RcloneRemoteName):$($Remote.Path)/$($Backup.Name)"
 				}
 			}
 		}
@@ -254,6 +254,6 @@ Remove-Item "$($LocalTarget.ExportPath)" -Force -Recurse
 
 LogWrite "Finished"
 
-Send-Notification -EmailArguments $MailArgs -Enabled $Notifications.Email.Enabled
+Send-Notification -EmailArguments $MailArgs -Enabled "$($Notifications.Email.Enabled)"
 
 Exit

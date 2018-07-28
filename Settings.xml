@@ -33,6 +33,9 @@
 	</VM>
 
 	<Applications>
+		<Hash>
+			<Algorithm>SHA256</Algorithm>
+		</Hash>
 		<SevenZip>
 			<Path>C:\Program Files\7-Zip\7z.exe</Path>
 			<Password>P@$$w0rd!</Password>

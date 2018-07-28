@@ -66,6 +66,7 @@ $SkipRemoteVerificationVMs = $ConfigFileXML.Settings.VM | ? { ($_.id -ne "all") 
 $SkipLocalChecksumVMs = $ConfigFileXML.Settings.VM | ? { ($_.id -ne "all") } | ? { ($_.SkipLocalChecksum -eq $true) }
 $AppRclone = $ConfigFileXML.Settings.Applications.Rclone 
 $App7zip = $ConfigFileXML.Settings.Applications.SevenZip
+$AppHash = $ConfigFileXML.Settings.Applications.Hash
 $LocalTarget = $ConfigFileXML.Settings.Targets.Local
 $RemoteTarget = $ConfigFileXML.Settings.Targets.Remote
 $Notifications = $ConfigFileXML.Settings.Notifications
@@ -163,7 +164,7 @@ Else {
 		# Not a pretty solution, I know...
 		# Split the archive's file name to grab the VM ID portion in the name
 		If ($SkipLocalChecksumVMs.id -notcontains (($Archive.Name).Split("_")[1]).Split(".")[0]) {
-			$Hash = (Get-FileHash $Archive.FullName -Algorithm SHA256).Hash
+			$Hash = (Get-FileHash $Archive.FullName -Algorithm $AppHash.Algorithm).Hash
 			LogWrite "SHA256: ${Hash} $($Archive.Name)"
 			Add-Content "$($LocalTarget.Path)\${Date}\$($Archive.Name).txt" -Value "SHA256: ${Hash} $($Archive.Name)"
 		}

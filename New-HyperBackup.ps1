@@ -2,7 +2,7 @@
 .SYNOPSIS
   A PowerShell script used to back up Hyper-V virtual machines. Rclone is used to upload and 7zip is used to archive. Options are configurable via XML.
 .DESCRIPTION
-  https://github.com/codaamok/HyperBackup
+  https://github.com/codaamok/PoSHHyperCloud
 .PARAMETER ConfigFile
   Path to XML configuration file, if not passed then assumes "Settings.xml" exists in same directory as this script
 .PARAMETER <Parameter_Name>
@@ -12,10 +12,10 @@
 .OUTPUTS
   <Outputs if any, otherwise state None>
 .NOTES
-  Version:        1.0
+  Version:        0.1
   Author:         Adam Cook
   Creation Date:  July 2018
-  Purpose/Change: Initial commit
+  Purpose/Change: Project rename and added "logs" folder to exclusions in rotation
 .EXAMPLE
   <Example explanation goes here>
   <Example goes here. Repeat this attribute for more than one example>
@@ -233,8 +233,7 @@ Else {
 			LogWrite "No old backups to delete from $($Remote.RcloneRemoteName) ($($Remote.RcloneType))"
 		}
 	}
-	# Excluded "exported" from directory listing in case users set <ExportPath> to be a folder that's a sub folder of $LocalTarget.Path
-	If ((ls $LocalTarget.Path | ? { ( $_.Name -ne "exported" ) } ).count -gt $LocalTarget.Retention) {
+	If ((ls $LocalTarget.Path | ? { ( $_.Name -ne "exported" ) } | ? { ( $_.Name -ne "logs" ) } ).count -gt $LocalTarget.Retention) {
 		ForEach ($LocalBackup in ($dir = ls $LocalTarget.Path | ? { ( $_.Name -ne "exported" ) } | Sort Name -Descending)) {
 			If ($dir.IndexOf($LocalBackup) -ge $LocalTarget.Retention) {
 				LogWrite "Deleting $($LocalBackup.Name) from $($LocalTarget.Path) (local)"

@@ -48,18 +48,18 @@
 
 	<Targets>
 		<Local>
-			<Path>C:\HyperBackup</Path>
-			<ExportPath>C:\HyperBackup\exported</ExportPath>
-			<Retention>1</Retention>
+			<Path>C:\backups</Path>
+			<ExportPath>C:\backups\exported</ExportPath>
+			<Retention>2</Retention>
 		</Local>
 		<Remote RcloneType="b2">
 			<RcloneRemoteName>backblaze-b2</RcloneRemoteName>
-			<Path>HyperBackup</Path>
+			<Path>backups</Path>
 			<Retention>2</Retention>
 		</Remote>
 		<Remote RcloneType="sftp">
 			<RcloneRemoteName>myvps</RcloneRemoteName>
-			<Path>/HyperBackup/</Path>
+			<Path>/backups/</Path>
 			<Retention>2</Retention>
 		</Remote>
 	</Targets>
@@ -78,7 +78,7 @@
 	</Notifications>
 
 	<Log>
-		<Path>C:\HyperBackup\Logs</Path>
+		<Path>C:\backups\logs</Path>
 	</Log>
 	
 </Settings>

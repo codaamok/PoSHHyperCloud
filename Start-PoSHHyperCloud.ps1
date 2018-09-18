@@ -1,31 +1,37 @@
 <#
 .SYNOPSIS
-  A PowerShell script used to back up Hyper-V virtual machines. Rclone is used to upload and 7zip is used to archive. Options are configurable via XML.
+  A PowerShell script used to back up Hyper-V virtual machines, using Rclone to upload and 7zip to archive. Options are configurable via XML.
 .DESCRIPTION
   https://github.com/codaamok/PoSHHyperCloud
 .PARAMETER ConfigFile
-  Path to XML configuration file, if not passed then assumes "Settings.xml" exists in same directory as this script
-.PARAMETER <Parameter_Name>
-  <Brief description of parameter input required. Repeat this attribute if required>
+  Path to XML configuration file, if not passed then assumes "settings.xml" exists in same directory as this script
 .INPUTS
-  <Inputs if any, otherwise state None>
+  An XML file, see https://github.com/codaamok/PoSHHyperCloud/wiki/XML-Configuration for more info
 .OUTPUTS
-  <Outputs if any, otherwise state None>
+  Output items are:
+    - Exported Hyper-V virtual machines
+    - [Encrypted] archives
+    - Folders:
+      - Job folders follow naming convention of yyyy-MM-dd_HH-mm-ss
+      - "exported" as target folder for exporting VMs
+      - "logs" as target folder for logs
+    - Log files following naming convention same as job folders, yyyy-MM-dd_HH-mm-ss 
+    - Email of log file upon completion
 .NOTES
   Version:        0.1
   Author:         Adam Cook
-  Creation Date:  July 2018
+  Creation Date:  September 2018
   Purpose/Change: Project rename and added "logs" folder to exclusions in rotation
 .EXAMPLE
-  <Example explanation goes here>
-  <Example goes here. Repeat this attribute for more than one example>
+  .\Start-PoSHHyperCloud.ps1
+  .\Start-PoSHHyperCloud.ps1 -ConfigFile C:\scripts\PoSHHyperCloud\configs\settings.xml
 #>
 
 Param (
 	[Parameter(Mandatory=$false)]
 	[ValidateScript({
 		If (-Not ($_ | Test-Path)) {
-			throw "Can't find Settings.xml in current directory"
+			throw "Can't find settings.xml in current directory"
 		}
 		If (-Not ($_ | Test-Path -PathType Leaf)) {
 			throw "Please specify an XML file"
@@ -43,8 +49,8 @@ Param (
 $ProgressPreference = "SilentlyContinue"
 
 If (!($ConfigFile)) { 
-	$ConfigFile = ((Split-Path -Parent $MyInvocation.MyCommand.Path) + "\Settings.xml")
-    [xml]$ConfigFileXML = Get-Content ((Split-Path -Parent $MyInvocation.MyCommand.Path) + "\Settings.xml")
+	$ConfigFile = ((Split-Path -Parent $MyInvocation.MyCommand.Path) + "\settings.xml")
+    [xml]$ConfigFileXML = Get-Content ((Split-Path -Parent $MyInvocation.MyCommand.Path) + "\settings.xml")
 }
 Else {
     [xml]$ConfigFileXML = Get-Content $ConfigFile
@@ -176,40 +182,50 @@ Else {
 
 LogWrite "Uploading started"
 
-ForEach ($Archive in (ls "$($LocalTarget.Path)\${Date}")) {
-	ForEach ($Remote in $RemoteTarget) {
-		LogWrite "Uploading $($Archive.Name) to $($Remote.RcloneRemoteName) ($($Remote.RcloneType))"
-		Start-Process -WindowStyle Hidden -FilePath "$($AppRclone.Path)" -ArgumentList "copy","$($Archive.FullName)","$($Remote.RcloneRemoteName):$($Remote.Path)/${Date}","--stats=10s","--bwlimit `"17:00,0.5M 23:00,off`"","-v" -Wait
+If ($RemoteTarget.count -gt 0) {
+	ForEach ($Archive in (ls "$($LocalTarget.Path)\${Date}")) {
+		ForEach ($Remote in $RemoteTarget) {
+			LogWrite "Uploading $($Archive.Name) to $($Remote.RcloneRemoteName) ($($Remote.RcloneType))"
+			Start-Process -WindowStyle Hidden -FilePath "$($AppRclone.Path)" -ArgumentList "copy","$($Archive.FullName)","$($Remote.RcloneRemoteName):$($Remote.Path)/${Date}","--stats=10s","--bwlimit `"17:00,0.5M 23:00,off`"","-v" -Wait
+		}
 	}
+}
+Else {
+	LogWrite "No remote targets configured, skipping step"
 }
 
 LogWrite "Verification started"
 
-If ((($VMSettings | ? { ($_.id -eq "all") }).SkipRemoteVerification) -eq $true) {
-	LogWrite "Configured to skip verifying remote archives, skipping step"
-}
-Else {
-	ForEach ($Archive in (ls "$($LocalTarget.Path)\${Date}")) {
-		ForEach ($Remote in $RemoteTarget) {
-			# Not a pretty solution, I know...
-			# Split the archive's file name to grab the VM ID portion in the name
-			If ($SkipRemoteVerificationVMs.id -notcontains (($Archive.Name).Split("_")[1]).Split(".")[0]) {
-				LogWrite "Verifying $($Archive.Name) on $($Remote.RcloneRemoteName) ($($Remote.RcloneType))"
-				$rc = Start-Process -WindowStyle Hidden -FilePath "$($AppRclone.Path)" -ArgumentList "check","$($Archive.FullName)","$($Remote.RcloneRemoteName):$($Remote.Path)/${Date}/" -PassThru -Wait
-				If ($rc.ExitCode -ne 0) {
-					LogWrite "Verification failed for $($Archive.Name) on $($Remote.RcloneRemoteName) ($($Remote.RcloneType))"
-					$VerificationCheck.$($Archive.Name) = $false
-				} 
-				Else {
-					LogWrite "Verification successful for $($Archive.Name) on $($Remote.RcloneRemoteName) ($($Remote.RcloneType))"
-					$VerificationCheck.$($Archive.Name) = $true
+If ($RemoteTarget.count -gt 0) {
+	If ((($VMSettings | ? { ($_.id -eq "all") }).SkipRemoteVerification) -eq $true) {
+		LogWrite "Configured to skip verifying remote archives, skipping step"
+	}
+	Else {
+		ForEach ($Archive in (ls "$($LocalTarget.Path)\${Date}")) {
+			ForEach ($Remote in $RemoteTarget) {
+				# Not a pretty solution, I know...
+				# Split the archive's file name to grab the VM ID portion in the name
+				If ($SkipRemoteVerificationVMs.id -notcontains (($Archive.Name).Split("_")[1]).Split(".")[0]) {
+					LogWrite "Verifying $($Archive.Name) on $($Remote.RcloneRemoteName) ($($Remote.RcloneType))"
+					$rc = Start-Process -WindowStyle Hidden -FilePath "$($AppRclone.Path)" -ArgumentList "check","$($Archive.FullName)","$($Remote.RcloneRemoteName):$($Remote.Path)/${Date}/" -PassThru -Wait
+					If ($rc.ExitCode -ne 0) {
+						LogWrite "Verification failed for $($Archive.Name) on $($Remote.RcloneRemoteName) ($($Remote.RcloneType))"
+						$VerificationCheck.$($Archive.Name) = $false
+					} 
+					Else {
+						LogWrite "Verification successful for $($Archive.Name) on $($Remote.RcloneRemoteName) ($($Remote.RcloneType))"
+						$VerificationCheck.$($Archive.Name) = $true
+					}
 				}
-			}
-			Else {
-				LogWrite "Configured to skip verification for $($Archive.Name), skipping"
+				Else {
+					LogWrite "Configured to skip verification for $($Archive.Name), skipping"
+				}
 			}
 		}
 	}
+}
+Else {
+	LogWrite "No remote targets configured, skipping step"
 }
 
 LogWrite "Rotation started"
@@ -235,7 +251,7 @@ Else {
 	}
 	If ((ls $LocalTarget.Path | ? { ( $_.Name -ne "exported" ) } | ? { ( $_.Name -ne "logs" ) } ).count -gt $LocalTarget.Retention) {
 		ForEach ($LocalBackup in ($dir = ls $LocalTarget.Path | ? { ( $_.Name -ne "exported" ) } | Sort Name -Descending)) {
-			If ($dir.IndexOf($LocalBackup) -ge $LocalTarget.Retention) {
+			If ($dir.IndexOf($LocalBackup) -gt $LocalTarget.Retention) {
 				LogWrite "Deleting $($LocalBackup.Name) from $($LocalTarget.Path) (local)"
 				Remove-Item "$($LocalBackup.FullName)" -Force -Recurse
 			}
